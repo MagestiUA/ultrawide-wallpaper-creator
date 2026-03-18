@@ -55,7 +55,8 @@ image_compiller/
 
 ```bash
 pip install pyinstaller
-pyinstaller --onefile --noconsole --collect-all customtkinter --icon=icon.ico --name "WallpaperCompiler" main.py
+pyinstaller --onefile --noconsole --collect-all customtkinter --icon=icon.ico --name "UWC
+" main.py
 ```
 
 Output: `dist/WallpaperCompiler.exe`
