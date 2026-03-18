@@ -1,4 +1,4 @@
-# 32:9 Wallpaper Compiler
+# 32:9 Ultrawide Wallpaper Creator
 
 A desktop tool for combining two 16:9 wallpapers into a single **10240×2880** image for ultrawide 32:9 monitors (Samsung Odyssey G9/G9 Neo, etc.).
 
