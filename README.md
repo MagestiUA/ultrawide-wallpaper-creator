@@ -6,6 +6,10 @@ A desktop tool for combining two 16:9 wallpapers into a single **10240×2880** i
 ![CustomTkinter](https://img.shields.io/badge/UI-CustomTkinter-informational)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
+## Preview
+
+![screenshot](screenshot.png)
+
 ## Features
 
 - **Visual thumbnail grid** — browse and pick wallpapers by sight
