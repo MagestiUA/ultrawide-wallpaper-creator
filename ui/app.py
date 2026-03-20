@@ -1,3 +1,4 @@
+import tkinter as tk
 import customtkinter as ctk
 from tkinter import filedialog, messagebox
 from pathlib import Path
@@ -17,7 +18,7 @@ ctk.set_default_color_theme("blue")
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.title("32:9 Wallpaper Compiler")
+        self.title("32:9 Ultrawide Wallpaper Creator")
         self.geometry("1440x940")
         self.minsize(1200, 900)
         self.configure(fg_color=COLOR_BG)
@@ -32,6 +33,7 @@ class App(ctk.CTk):
         self._left_card: ThumbnailCard | None = None
         self._right_card: ThumbnailCard | None = None
         self._next_side = "left"  # перший клік = left, другий = right
+        self._current_cols = 2
 
         self._build_ui()
 
@@ -45,7 +47,7 @@ class App(ctk.CTk):
 
         ctk.CTkLabel(
             header,
-            text="◈  32:9 WALLPAPER COMPILER",
+            text="◈  32:9 WALLPAPER CREATOR",
             font=("Courier New", 18, "bold"),
             text_color=COLOR_ACCENT,
         ).pack(side="left", padx=24, pady=16)
@@ -120,12 +122,48 @@ class App(ctk.CTk):
             text_color=COLOR_MUTED,
         ).pack(anchor="w", padx=16, pady=(0, 8))
 
-        # Scrollable грід
-        self._scroll = ctk.CTkScrollableFrame(
-            frame, fg_color="transparent",
-            scrollbar_button_color=COLOR_ACCENT,
+        # Кастомний scroll (tk.Canvas + CTkScrollbar) — без артефактів на Windows
+        scroll_outer = tk.Frame(frame, bg=COLOR_CARD)
+        scroll_outer.pack(fill="both", expand=True, padx=8, pady=(0, 8))
+
+        scrollbar = ctk.CTkScrollbar(scroll_outer, orientation="vertical",
+                                     button_color=COLOR_ACCENT)
+        scrollbar.pack(side="right", fill="y")
+
+        self._canvas = tk.Canvas(
+            scroll_outer, bg=COLOR_CARD,
+            highlightthickness=0, bd=0,
         )
-        self._scroll.pack(fill="both", expand=True, padx=8, pady=(0, 8))
+        self._canvas.pack(side="left", fill="both", expand=True)
+        self._canvas.configure(yscrollcommand=scrollbar.set)
+        scrollbar.configure(command=self._canvas.yview)
+
+        self._scroll = tk.Frame(self._canvas, bg=COLOR_CARD)
+        self._canvas_win = self._canvas.create_window((0, 0), window=self._scroll, anchor="nw")
+
+        self._scroll.bind("<Configure>", self._on_scroll_frame_configure)
+        self._canvas.bind("<Configure>", self._on_canvas_configure)
+        self.bind_all("<MouseWheel>", self._on_mousewheel)
+
+    def _on_scroll_frame_configure(self, event):
+        self._canvas.configure(scrollregion=self._canvas.bbox("all"))
+
+    def _on_canvas_configure(self, event):
+        self._canvas.itemconfig(self._canvas_win, width=event.width)
+        from ui.widgets import CARD_W
+        new_cols = max(1, event.width // (CARD_W + 12))
+        if new_cols != self._current_cols and self.cards:
+            self._current_cols = new_cols
+            self._regrid_cards()
+
+    def _on_mousewheel(self, event):
+        cx = self._canvas.winfo_rootx()
+        cy = self._canvas.winfo_rooty()
+        cw = self._canvas.winfo_width()
+        ch = self._canvas.winfo_height()
+        if cx <= event.x_root <= cx + cw and cy <= event.y_root <= cy + ch:
+            self._canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+            self._canvas.update_idletasks()
 
     def _build_control_panel(self, parent):
         panel = ctk.CTkFrame(parent, fg_color="transparent", width=680)
@@ -144,9 +182,21 @@ class App(ctk.CTk):
         self._preview = PairPreview(panel)
         self._preview.pack(fill="x")
 
+        # Swap button
+        swap_row = ctk.CTkFrame(panel, fg_color="transparent")
+        swap_row.pack(fill="x", pady=(6, 0))
+        ctk.CTkButton(
+            swap_row, text="⇄  SWAP L / R", width=140,
+            font=("Courier New", 12, "bold"),
+            fg_color="#2a5fad", hover_color="#1e4a8a",
+            text_color="white",
+            corner_radius=8,
+            command=self._swap_images,
+        ).pack(side="right")
+
         # Crop region pickers
         crop_frame = ctk.CTkFrame(panel, fg_color=COLOR_CARD, corner_radius=10)
-        crop_frame.pack(fill="x", pady=12)
+        crop_frame.pack(fill="x", pady=6)
 
         self._crop_left = CropRegionPicker(crop_frame, label="LEFT", on_change=self._refresh_preview)
         self._crop_left.pack(padx=10, pady=(10, 4))
@@ -253,15 +303,30 @@ class App(ctk.CTk):
         self._status.configure(text=f"{len(self.images)} images found")
 
     def _render_grid(self):
+        """Повний рендер: знищує і створює всі картки. Тільки при завантаженні папки."""
         for w in self._scroll.winfo_children():
             w.destroy()
         self.cards.clear()
+        self._left_card = None
+        self._right_card = None
 
-        COLS = 3
+        cols = self._current_cols
         for i, path in enumerate(self.images):
             card = ThumbnailCard(self._scroll, path, on_select=self._on_card_click)
-            card.grid(row=i // COLS, column=i % COLS, padx=6, pady=6, sticky="nw")
+            card.grid(row=i // cols, column=i % cols, padx=6, pady=6, sticky="nw")
             self.cards.append(card)
+            if self._left_path and path == self._left_path:
+                card.set_selection("left")
+                self._left_card = card
+            elif self._right_path and path == self._right_path:
+                card.set_selection("right")
+                self._right_card = card
+
+    def _regrid_cards(self):
+        """Легке переміщення: просто переставляє існуючі картки без перезавантаження."""
+        cols = self._current_cols
+        for i, card in enumerate(self.cards):
+            card.grid(row=i // cols, column=i % cols, padx=6, pady=6, sticky="nw")
 
     def _on_card_click(self, card: ThumbnailCard, side: str | None = None):
         if side is not None:
@@ -322,6 +387,21 @@ class App(ctk.CTk):
         self._next_side = "left"
         self._crop_left.reset()
         self._crop_right.reset()
+
+    def _swap_images(self):
+        if not self._left_path and not self._right_path:
+            return
+        self._left_path, self._right_path = self._right_path, self._left_path
+        self._left_card, self._right_card = self._right_card, self._left_card
+        if self._left_card:
+            self._left_card.set_selection("left")
+        if self._right_card:
+            self._right_card.set_selection("right")
+        left_state = self._crop_left.get_state()
+        right_state = self._crop_right.get_state()
+        self._crop_left.set_state(right_state)
+        self._crop_right.set_state(left_state)
+        self._refresh_preview()
 
     def _refresh_preview(self):
         self._preview.update_preview(

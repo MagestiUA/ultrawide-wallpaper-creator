@@ -12,8 +12,9 @@ A desktop tool for combining two 16:9 wallpapers into a single **10240×2880** i
 
 ## Features
 
-- **Visual thumbnail grid** — browse and pick wallpapers by sight
+- **Visual thumbnail grid** — browse and pick wallpapers by sight; column count scales with window width
 - **L / R slot assignment** — click a card to auto-assign, or click the `L` / `R` badge to force a specific side
+- **⇄ Swap L / R** — swap the selected left and right images with one click (crop and rotation preserved)
 - **Drag-to-crop picker** — drag a 16:9 crop box directly on each image to choose the framing
 - **Per-image rotation** — rotate source images in 90° steps before cropping
 - **Live 32:9 preview** — see the combined result before generating
@@ -59,11 +60,10 @@ image_compiller/
 
 ```bash
 pip install pyinstaller
-pyinstaller --onefile --noconsole --collect-all customtkinter --icon=icon.ico --name "UWC
-" main.py
+pyinstaller --onefile --noconsole --collect-all customtkinter --icon=icon.ico --name "UWC" main.py
 ```
 
-Output: `dist/WallpaperCompiler.exe`
+Output: `dist/UWC.exe`
 
 ## Requirements
 

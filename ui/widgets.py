@@ -45,11 +45,10 @@ class ThumbnailCard(ctk.CTkFrame):
         self.bind("<Button-1>", self._on_click)
 
     def _build(self):
-        self.grid_propagate(False)
         self.pack_propagate(False)
 
         self.thumb_label = ctk.CTkLabel(self, text="", width=THUMB_W, height=THUMB_H)
-        self.thumb_label.place(x=10, y=8)
+        self.thumb_label.pack(padx=10, pady=(8, 2))
         self.thumb_label.bind("<Button-1>", self._on_click)
 
         name = self.image_path.name
@@ -62,26 +61,29 @@ class ThumbnailCard(ctk.CTkFrame):
             width=CARD_W - 20,
             anchor="w",
         )
-        self.name_label.place(x=10, y=THUMB_H + 12)
+        self.name_label.pack(anchor="w", padx=10, pady=(0, 2))
         self.name_label.bind("<Button-1>", self._on_click)
 
         # Бейджи L / R (клікабельні)
+        badge_row = ctk.CTkFrame(self, fg_color="transparent")
+        badge_row.pack(anchor="w", padx=10)
+
         self.badge_l = ctk.CTkLabel(
-            self, text=" L ", width=28, height=20,
+            badge_row, text=" L ", width=28, height=20,
             font=("Courier New", 11, "bold"),
             fg_color=COLOR_BG, text_color=COLOR_MUTED,
             corner_radius=4, cursor="hand2",
         )
-        self.badge_l.place(x=10, y=THUMB_H + 34)
+        self.badge_l.pack(side="left")
         self.badge_l.bind("<Button-1>", self._on_badge_l_click)
 
         self.badge_r = ctk.CTkLabel(
-            self, text=" R ", width=28, height=20,
+            badge_row, text=" R ", width=28, height=20,
             font=("Courier New", 11, "bold"),
             fg_color=COLOR_BG, text_color=COLOR_MUTED,
             corner_radius=4, cursor="hand2",
         )
-        self.badge_r.place(x=44, y=THUMB_H + 34)
+        self.badge_r.pack(side="left", padx=(4, 0))
         self.badge_r.bind("<Button-1>", self._on_badge_r_click)
 
     def _load_thumbnail(self):
@@ -394,6 +396,28 @@ class CropRegionPicker(ctk.CTkFrame):
 
     def get_anchor(self) -> tuple[float, float]:
         return self._anchor_x, self._anchor_y
+
+    def get_state(self) -> dict:
+        return {
+            "path": self._image_path,
+            "rotation": self._rotation_cw,
+            "anchor_x": self._anchor_x,
+            "anchor_y": self._anchor_y,
+        }
+
+    def set_state(self, state: dict):
+        path = state["path"]
+        if path is None:
+            self.reset()
+            return
+        self._image_path = path
+        self._rotation_cw = state["rotation"]
+        self._anchor_x = state["anchor_x"]
+        self._anchor_y = state["anchor_y"]
+        self._orig_size = None
+        self._tk_img = None
+        self._draw_placeholder()
+        self._load_async()
 
     def reset(self):
         self._image_path = None
